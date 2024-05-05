@@ -1,11 +1,17 @@
 import { db } from "@/util/db";
+import { getUser } from "@/util/kinde";
 import { Hono } from "hono";
 
 const router = new Hono();
 
-router.get("/", async (c) => {
+router.get("/", getUser, async (c) => {
   try {
-    const goals = await db.goals.findMany({ take: 25 });
+    const user = c.var.user;
+
+    const goals = await db.goals.findMany({
+      where: { kinde_userId: user.id },
+      take: 25,
+    });
 
     return c.json({ ok: true, goals });
   } catch (error: any) {
