@@ -6,10 +6,18 @@ import Spinner from "@/components/Spinner";
 import { Goals } from "@prisma/client";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-
-function wait(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+import { wait } from "@/lib/helpers";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function Home() {
   const [user, setUser] = useState<UserType | null>(null);
@@ -32,7 +40,7 @@ export default function Home() {
       const response = await fetch("/api/goals");
       if (!response.ok) return toast.error("Fetch failed for goals");
 
-      await wait(1000);
+      await wait(500);
 
       setGoalsLoading(false);
 
@@ -71,8 +79,60 @@ export default function Home() {
               )}
 
               {goals.length === 0 && !goalsLoading && (
-                <span className="text-lg">Ingen mål fundet</span>
+                <div>
+                  <span className="text-lg">Ingen mål fundet</span>
+                </div>
               )}
+
+              {goals.length > 0 && (
+                <div className="space-y-4">
+                  {goals.map((goal) => (
+                    <div key={goal.id} className="flex items-center">
+                      <h2 className="text-lg">{goal.goal}</h2>
+                      <span className="text-sm ml-2">
+                        {goal.createdAt.toLocaleTimeString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline">Opret mål</Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Opret et nyt mål</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="name" className="text-right">
+                        Hvad vil du droppe?
+                      </Label>
+                      <Textarea
+                        id="name"
+                        placeholder="F.eks. rygning, sukker, alkohol osv."
+                        className="col-span-3"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="name" className="text-right">
+                        Hvor mange dage vil du droppe det?
+                      </Label>
+                      <Input
+                        id="name"
+                        type="number"
+                        placeholder="F.eks. 30"
+                        className="col-span-3"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button type="submit">Opret Mål</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </>
           ) : (
             <>
