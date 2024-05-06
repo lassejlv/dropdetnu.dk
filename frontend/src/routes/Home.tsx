@@ -7,7 +7,7 @@ import { Goals } from "@prisma/client";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { wait } from "@/lib/helpers";
-import ms from "ms";
+
 import {
   Dialog,
   DialogContent,
@@ -15,9 +15,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import GoalsList from "@/components/GoalsList";
+import { LogOut } from "lucide-react";
 
 export default function Home() {
   const [user, setUser] = useState<UserType | null>(null);
@@ -80,6 +83,14 @@ export default function Home() {
 
     setResponseLoading(false);
 
+    // Click the esc button to close the dialog
+    const esc = new KeyboardEvent("keydown", {
+      key: "Escape",
+    });
+
+    //
+    document.dispatchEvent(esc);
+
     toast.success("Mål oprettet");
 
     const json = await response.json();
@@ -95,12 +106,20 @@ export default function Home() {
         <>
           {user ? (
             <>
-              <h1 className="text-3xl">
-                Velkommen tilbage{" "}
-                <span className="font-bold text-primary">
-                  {user.given_name}!
-                </span>
-              </h1>
+              <div className="flex items-center justify-between">
+                <h1 className="text-3xl">
+                  Drop Det <span className="text-primary font-bold">Nu</span>
+                </h1>
+
+                <div>
+                  <span className="text-lg">
+                    Velkommen,{" "}
+                    <span className="font-bold">
+                      {user.given_name} {user.family_name}
+                    </span>
+                  </span>
+                </div>
+              </div>
 
               {goalsLoading && (
                 <div className="space-y-4">
@@ -120,69 +139,93 @@ export default function Home() {
               )}
 
               {goals.length > 0 && (
-                <div className="space-y-4">
-                  {goals.map((goal) => (
-                    <div key={goal.id} className="flex items-center">
-                      <h2 className="text-lg">{goal.goal}</h2>
-                      <span className="text-sm ml-2">
-                        {ms(
-                          new Date(goal.endDate).getTime() -
-                            new Date().getTime(),
-                          { long: true }
-                        )}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                <GoalsList
+                  goals={goals}
+                  removeItem={(id) => {
+                    setGoals(goals.filter((goal) => goal.id !== id));
+                  }}
+                />
               )}
 
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline">Opret mål</Button>
-                </DialogTrigger>
+              <div className="flex items-center mt-4">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline">Opret mål</Button>
+                  </DialogTrigger>
 
-                <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                    <DialogTitle>Opret et nyt mål</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleNewGoal} className="space-y-4">
-                    <div>
-                      <Label htmlFor="name" className="text-right">
-                        Hvad vil du droppe?
-                      </Label>
-                      <Textarea
-                        id="goal"
-                        name="goal"
-                        placeholder="F.eks. rygning, sukker, alkohol osv."
-                        className="col-span-3"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="name" className="text-right">
-                        Hvor mange dage vil du droppe det?
-                      </Label>
-                      <Input
-                        id="days"
-                        name="days"
-                        type="number"
-                        placeholder="F.eks. 30"
-                        className="col-span-3"
-                      />
-                    </div>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>Opret et nyt mål</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleNewGoal} className="space-y-4">
+                      <div>
+                        <Label htmlFor="name" className="text-right">
+                          Hvad vil du droppe?
+                        </Label>
+                        <Textarea
+                          id="goal"
+                          name="goal"
+                          placeholder="F.eks. rygning, sukker, alkohol osv."
+                          className="col-span-3"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="name" className="text-right">
+                          Hvor mange dage vil du droppe det?
+                        </Label>
+                        <Input
+                          id="days"
+                          name="days"
+                          type="number"
+                          placeholder="F.eks. 30"
+                          className="col-span-3"
+                        />
+                      </div>
 
-                    <Button type="submit" disabled={responseLoading}>
-                      {responseLoading ? (
-                        <>
-                          {" "}
-                          <Spinner /> Opretter...{" "}
-                        </>
-                      ) : (
-                        "Opret Mål"
-                      )}
-                    </Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
+                      <Button type="submit" disabled={responseLoading}>
+                        {responseLoading ? (
+                          <>
+                            {" "}
+                            <Spinner /> Opretter...{" "}
+                          </>
+                        ) : (
+                          "Opret Mål"
+                        )}
+                      </Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+                <Button
+                  variant="destructive"
+                  className="ml-2"
+                  onClick={async () => {
+                    setResponseLoading(true);
+
+                    const response = await fetch("/api/auth/logout");
+
+                    if (!response.ok) {
+                      toast.error("Failed to logout");
+                      return;
+                    }
+
+                    await wait(500);
+
+                    setUser(null);
+                    setResponseLoading(false);
+                    setGoals([]);
+                    toast.success("Du er nu logget ud");
+                  }}
+                >
+                  {responseLoading ? (
+                    <Spinner />
+                  ) : (
+                    <>
+                      <LogOut />
+                      Log ud
+                    </>
+                  )}
+                </Button>
+              </div>
             </>
           ) : (
             <>

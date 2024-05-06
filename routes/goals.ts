@@ -50,4 +50,19 @@ router.post("/", getUser, zValidator("json", schema), async (c) => {
   }
 });
 
+router.delete("/:id", getUser, async (c) => {
+  const id = await c.req.param("id");
+  const user = c.var.user;
+
+  try {
+    await db.goals.deleteMany({
+      where: { id, kinde_userId: user.id },
+    });
+
+    return c.json({ ok: true });
+  } catch (error) {
+    return c.json({ ok: false, error }, 500);
+  }
+});
+
 export default router;
