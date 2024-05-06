@@ -7,10 +7,10 @@ import { Goals } from "@prisma/client";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { wait } from "@/lib/helpers";
+import ms from "ms";
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -23,6 +23,7 @@ export default function Home() {
   const [user, setUser] = useState<UserType | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
   const [goalsLoading, setGoalsLoading] = useState<boolean>(true);
+  const [responseLoading, setResponseLoading] = useState<boolean>(false);
   const [goals, setGoals] = useState<Goals[] | []>([]);
 
   useEffect(() => {
@@ -38,7 +39,9 @@ export default function Home() {
 
     const getGoals = async () => {
       const response = await fetch("/api/goals");
-      if (!response.ok) return toast.error("Fetch failed for goals");
+      if (!response.ok) {
+        throw new Error("Failed to fetch goals");
+      }
 
       await wait(500);
 
@@ -51,6 +54,38 @@ export default function Home() {
 
     getGoals();
   }, []);
+
+  const handleNewGoal = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const data = new FormData(e.currentTarget);
+    const goal = data.get("goal") as string;
+    const days = data.get("days") as string;
+
+    if (!goal || !days) return toast.error("Udfyld venligst alle felter");
+
+    setResponseLoading(true);
+
+    const response = await fetch("/api/goals", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ goal, days: Number(days) }),
+    });
+
+    if (!response.ok) return toast.error("Failed to create goal");
+
+    await wait(500);
+
+    setResponseLoading(false);
+
+    toast.success("Mål oprettet");
+
+    const json = await response.json();
+
+    setGoals([...goals, json.goal]);
+  };
 
   return (
     <main className="container mx-auto p-4">
@@ -90,7 +125,11 @@ export default function Home() {
                     <div key={goal.id} className="flex items-center">
                       <h2 className="text-lg">{goal.goal}</h2>
                       <span className="text-sm ml-2">
-                        {goal.createdAt.toLocaleTimeString()}
+                        {ms(
+                          new Date(goal.endDate).getTime() -
+                            new Date().getTime(),
+                          { long: true }
+                        )}
                       </span>
                     </div>
                   ))}
@@ -101,17 +140,19 @@ export default function Home() {
                 <DialogTrigger asChild>
                   <Button variant="outline">Opret mål</Button>
                 </DialogTrigger>
+
                 <DialogContent className="sm:max-w-[425px]">
                   <DialogHeader>
                     <DialogTitle>Opret et nyt mål</DialogTitle>
                   </DialogHeader>
-                  <div className="space-y-4">
+                  <form onSubmit={handleNewGoal} className="space-y-4">
                     <div>
                       <Label htmlFor="name" className="text-right">
                         Hvad vil du droppe?
                       </Label>
                       <Textarea
-                        id="name"
+                        id="goal"
+                        name="goal"
                         placeholder="F.eks. rygning, sukker, alkohol osv."
                         className="col-span-3"
                       />
@@ -121,16 +162,25 @@ export default function Home() {
                         Hvor mange dage vil du droppe det?
                       </Label>
                       <Input
-                        id="name"
+                        id="days"
+                        name="days"
                         type="number"
                         placeholder="F.eks. 30"
                         className="col-span-3"
                       />
                     </div>
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit">Opret Mål</Button>
-                  </DialogFooter>
+
+                    <Button type="submit" disabled={responseLoading}>
+                      {responseLoading ? (
+                        <>
+                          {" "}
+                          <Spinner /> Opretter...{" "}
+                        </>
+                      ) : (
+                        "Opret Mål"
+                      )}
+                    </Button>
+                  </form>
                 </DialogContent>
               </Dialog>
             </>
